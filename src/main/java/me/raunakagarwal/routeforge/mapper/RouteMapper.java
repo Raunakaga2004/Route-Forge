@@ -12,7 +12,7 @@ public class RouteMapper {
         Route route = new Route();
         route.setSource(source);
         route.setPath(routeRequestDTO.getPath());
-        route.setTargetUrl(route.getTargetUrl());
+        route.setTargetUrl(routeRequestDTO.getTargetUrl());
         return route;
     }
 
