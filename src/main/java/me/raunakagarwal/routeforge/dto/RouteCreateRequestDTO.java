@@ -6,6 +6,7 @@ import lombok.Data;
 
 @Data
 public class RouteCreateRequestDTO {
+    @NotBlank
     private String path;
     @NotBlank
     private String targetUrl;
