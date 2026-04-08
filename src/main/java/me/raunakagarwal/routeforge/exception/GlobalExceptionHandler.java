@@ -10,6 +10,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -48,7 +50,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponseDTO> handleMethodArgumentValidationException(HttpServletRequest request, MethodArgumentNotValidException exception) {
+    public ResponseEntity<ErrorResponseDTO> handleMethodArgumentValid(HttpServletRequest request, MethodArgumentNotValidException exception) {
         HttpStatus status = HttpStatus.BAD_REQUEST;
 
         List<FieldErrorDTO> fieldErrors = exception.getFieldErrors()
@@ -66,7 +68,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(SourceNotFoundException.class)
-    public ResponseEntity<ErrorResponseDTO> handleSourceNotFoundException(HttpServletRequest request, SourceNotFoundException exception) {
+    public ResponseEntity<ErrorResponseDTO> handleSourceNotFound(HttpServletRequest request, SourceNotFoundException exception) {
         HttpStatus status = HttpStatus.NOT_FOUND;
 
         return ResponseEntity.status(status).body(buildError(
@@ -79,7 +81,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(RouteNotFoundException.class)
-    public ResponseEntity<ErrorResponseDTO> handleSourceNotFoundException(HttpServletRequest request, RouteNotFoundException exception) {
+    public ResponseEntity<ErrorResponseDTO> handleRouteNotFound(HttpServletRequest request, RouteNotFoundException exception) {
         HttpStatus status = HttpStatus.NOT_FOUND;
 
         return ResponseEntity.status(status).body(buildError(
@@ -92,7 +94,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
-    public ResponseEntity<ErrorResponseDTO> handleSourceNotFoundException(HttpServletRequest request, MissingServletRequestParameterException exception) {
+    public ResponseEntity<ErrorResponseDTO> handleMissingServletRequestParameter(HttpServletRequest request, MissingServletRequestParameterException exception) {
         HttpStatus status = HttpStatus.BAD_REQUEST;
 
         List<FieldErrorDTO> errorFields = Stream.of(
@@ -108,10 +110,43 @@ public class GlobalExceptionHandler {
         ));
     }
 
+    @ExceptionHandler(ResourceAccessException.class)
+    public ResponseEntity<ErrorResponseDTO> handleResourceAccess(HttpServletRequest request, ResourceAccessException exception) {
+        HttpStatus status = HttpStatus.SERVICE_UNAVAILABLE;
+
+        return ResponseEntity.status(status).body(buildError(
+                status.value(),
+                ErrorCode.SERVICE_UNAVAILABLE,
+                "Service is Down.",
+                request.getRequestURI(),
+                List.of()
+        ));
+    }
+
+    @ExceptionHandler(HttpClientErrorException.class)
+    public ResponseEntity<ErrorResponseDTO> handleHttpClientError(HttpServletRequest request, HttpClientErrorException exception) {
+        HttpStatus status = (HttpStatus) exception.getStatusCode();
+
+        ErrorCode errorCode = switch (status) {
+            case NOT_FOUND -> ErrorCode.SERVICE_ERROR_NOT_FOUND;
+            case BAD_REQUEST -> ErrorCode.SERVICE_ERROR_BAD_REQUEST;
+            default -> ErrorCode.SERVICE_ERROR;
+        };
+
+        return ResponseEntity.status(status).body(buildError(
+                status.value(),
+                errorCode,
+                "Service returned " + ((HttpStatus) exception.getStatusCode()).getReasonPhrase(),
+                request.getRequestURI(),
+                List.of()
+        ));
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ErrorResponseDTO> handleGeneralException(HttpServletRequest request, RuntimeException exception) {
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         System.err.println(exception.getClass() + " : " + exception.getMessage());
+
         return ResponseEntity.status(status).body(buildError(
                 status.value(),
                 ErrorCode.SERVER_ERROR,
