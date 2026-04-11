@@ -8,8 +8,6 @@ import java.util.List;
 
 public interface RouteRepository extends JpaRepository<Route, Long> {
     List<Route> findBySourceDomainIgnoreCase(String domain);
-
     boolean existsBySourceAndPath(Source source, String path);
-
     List<Route> findBySourceId(Long id);
 }

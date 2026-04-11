@@ -65,4 +65,29 @@ public class ConfigController {
     public String deleteRoute(@PathVariable Long id){
         return configService.deleteRoute(id);
     }
+
+    @PostMapping("/route-policy")
+    public RoutePolicyResponse addRoutePolicy(@Valid @RequestBody RoutePolicyCreateRequest routePolicyCreateRequest){
+        return configService.addRoutePolicy(routePolicyCreateRequest);
+    }
+
+    @PatchMapping("/route-policy/{id}")
+    public RoutePolicyResponse updateRoutePolicy(@PathVariable Long id, @RequestBody RoutePolicyUpdateRequest routePolicyUpdateRequest){
+        return configService.updateRoutePolicy(id, routePolicyUpdateRequest);
+    }
+
+    @GetMapping("/route-policy/{id}")
+    public RoutePolicyResponse getRoutePolicy(@PathVariable Long id){
+        return configService.getRoutePolicy(id);
+    }
+
+    @GetMapping("/route-policies/{routeId}")
+    public List<RoutePolicyResponse> getAllRoutePolicy(@PathVariable Long routeId){
+        return configService.getAllRoutePolicy(routeId);
+    }
+
+    @DeleteMapping("/route-policy/{id}")
+    public String deleteRoutePolicy(@PathVariable Long id){
+        return configService.deleteRoutePolicy(id);
+    }
 }

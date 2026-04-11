@@ -3,13 +3,13 @@ package me.raunakagarwal.routeforge.service;
 import lombok.AllArgsConstructor;
 import me.raunakagarwal.routeforge.dto.*;
 import me.raunakagarwal.routeforge.entity.Route;
+import me.raunakagarwal.routeforge.entity.RoutePolicy;
 import me.raunakagarwal.routeforge.entity.Source;
-import me.raunakagarwal.routeforge.exception.DuplicateRouteException;
-import me.raunakagarwal.routeforge.exception.DuplicateSourceException;
-import me.raunakagarwal.routeforge.exception.RouteNotFoundException;
-import me.raunakagarwal.routeforge.exception.SourceNotFoundException;
+import me.raunakagarwal.routeforge.exception.*;
 import me.raunakagarwal.routeforge.mapper.RouteMapper;
+import me.raunakagarwal.routeforge.mapper.RoutePolicyMapper;
 import me.raunakagarwal.routeforge.mapper.SourceMapper;
+import me.raunakagarwal.routeforge.repository.RoutePolicyRepository;
 import me.raunakagarwal.routeforge.repository.RouteRepository;
 import me.raunakagarwal.routeforge.repository.SourceRepository;
 import org.springframework.stereotype.Service;
@@ -22,8 +22,10 @@ import java.util.List;
 public class ConfigService {
     private RouteRepository routeRepository;
     private SourceRepository sourceRepository;
+    private RoutePolicyRepository routePolicyRepository;
     private RouteMapper routeMapper;
     private SourceMapper sourceMapper;
+    private RoutePolicyMapper routePolicyMapper;
 
     public SourceResponseDTO addSource(SourceCreateRequestDTO sourceRequest) {
         Source source = sourceMapper.toEntity(sourceRequest);
@@ -125,6 +127,64 @@ public class ConfigService {
             return "Route Deleted Successfully!";
         } else {
             throw new RouteNotFoundException();
+        }
+    }
+
+    public RoutePolicyResponse addRoutePolicy(RoutePolicyCreateRequest routePolicyCreateRequest) {
+        Route route = routeRepository.findById(routePolicyCreateRequest.getRouteId()).orElseThrow(RouteNotFoundException::new);
+        RoutePolicy routePolicy = routePolicyMapper.toEntity(routePolicyCreateRequest, route);
+        if (routePolicyRepository.existsByRouteAndPathPattern(route, routePolicy.getPathPattern())) {
+            throw new DuplicateRoutePolicyException();
+        }
+        RoutePolicy savedRoutePolicy = routePolicyRepository.save(routePolicy);
+        return routePolicyMapper.toDTO(savedRoutePolicy);
+    }
+
+    public RoutePolicyResponse updateRoutePolicy(Long id, RoutePolicyUpdateRequest routePolicyUpdateRequest) {
+        RoutePolicy routePolicy = routePolicyRepository.findById(id).orElseThrow(RoutePolicyNotFoundException::new);
+        String pathPattern = routePolicyUpdateRequest.getPathPattern();
+        RoutePolicy.AuthType authType = routePolicyUpdateRequest.getAuthType();
+        String publicKey = routePolicyUpdateRequest.getPublicKey();
+        String jwkUrl = routePolicyUpdateRequest.getJwkUrl();
+        String secretKey = routePolicyUpdateRequest.getSecretKey();
+        if (pathPattern != null && !pathPattern.isBlank())
+            routePolicy.setPathPattern(pathPattern);
+        if (authType != null)
+            routePolicy.setAuthType(authType);
+
+        if(routePolicy.getAuthType() == RoutePolicy.AuthType.JWT_HS256){
+            if (publicKey != null && !publicKey.isBlank())
+                routePolicy.setPublicKey(publicKey);
+            if (jwkUrl != null && !jwkUrl.isBlank())
+                routePolicy.setJwkUrl(jwkUrl);
+        }
+        if (routePolicy.getAuthType() == RoutePolicy.AuthType.JWT_HS256 && secretKey != null && !secretKey.isBlank())
+            routePolicy.setSecretKey(secretKey);
+
+        RoutePolicy updatedRoutePolicy = routePolicyRepository.save(routePolicy);
+        return routePolicyMapper.toDTO(updatedRoutePolicy);
+    }
+
+    public RoutePolicyResponse getRoutePolicy(Long id) {
+        RoutePolicy routePolicy = routePolicyRepository.findById(id).orElseThrow(RoutePolicyNotFoundException::new);
+        return routePolicyMapper.toDTO(routePolicy);
+    }
+
+    public List<RoutePolicyResponse> getAllRoutePolicy(Long routeId) {
+        Route route = routeRepository.findById(routeId).orElseThrow(RouteNotFoundException::new);
+        List<RoutePolicy> routePolicies = route.getRoutePolicies();
+        return routePolicies.stream()
+                .map(routePolicy -> routePolicyMapper.toDTO(routePolicy))
+                .toList();
+    }
+
+    public String deleteRoutePolicy(Long id) {
+        boolean routePolicyExists = routePolicyRepository.existsById(id);
+        if (routePolicyExists) {
+            routePolicyRepository.deleteById(id);
+            return "Route Deleted Successfully!";
+        } else {
+            throw new RoutePolicyNotFoundException();
         }
     }
 }

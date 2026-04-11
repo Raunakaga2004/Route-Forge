@@ -3,6 +3,8 @@ package me.raunakagarwal.routeforge.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.util.List;
+
 @Entity
 @Table(
         name = "route",
@@ -23,4 +25,7 @@ public class Route {
     @JoinColumn(name = "source_id")
     @ManyToOne
     private Source source;
+
+    @OneToMany(mappedBy = "route")
+    private List<RoutePolicy> routePolicies;
 }
